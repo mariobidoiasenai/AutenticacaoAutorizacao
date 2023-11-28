@@ -1,0 +1,47 @@
+﻿@inject IProdutosServices ProdutosService
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject ICategoriaService CategoriaService
+
+<div class="d-flex flex-wrap">
+    @foreach (var produto in Produtos)
+    {
+        LoadImage(produto.UrlImage, produto.Id);
+        <a href="ProdutoDetalhes/@produto.Id" class="text-decoration-none">
+            <div class="card m-2">
+                <div class="card-img-top">
+                    <img id="@produto.Id" width="300" height="300" />
+                </div>
+                <div>
+                    <p class="text-center">@produto.Nome</p>
+                </div>
+                <div class="card-footer">
+                    <p class="text-primary text-end">R$@produto.Preco</p>
+                </div>
+            </div>
+        </a>
+
+    }
+</div>
+
+@code {
+    [Parameter]
+    public List<ProdutoDTO> Produtos { get; set; } =  new List<ProdutoDTO>();
+
+    private async Task LoadImage(string urlImage, int id)
+    {
+        var response = await Http.GetAsync($"/api/File/{urlImage}");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            await JS.InvokeVoidAsync("alert", "File not found.");
+        }
+        else
+        {
+            var fileStream = response.Content.ReadAsStream();
+            using var streamRef = new DotNetStreamReference(stream: fileStream);
+            await JS.InvokeVoidAsync("setImage", id, streamRef);
+            //await JS.InvokeVoidAsync("downloadFileFromStream", originalFileName, streamRef);
+        }
+    }
+}

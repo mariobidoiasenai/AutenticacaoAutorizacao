@@ -1,0 +1,66 @@
+﻿@page "/ProdutoDetalhes/{Id:int}"
+@inject IProdutosServices ProdutosService
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject ICategoriaService CategoriaService
+
+
+@if (Produto is null)
+{
+    <ExibirSpinner />
+}
+else
+{
+    <h3 class="mb-5">Detalhes do Produto</h3>
+    LoadImage(Produto.UrlImage, Produto.Id);
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <img class="img-fluid" id="@Produto.Id" width="300" height="300" />
+        </div>
+        <div class="col-md-6">
+            <h3>@Produto.Nome</h3>
+            <p class="mb-4">@Produto.Descricao</p>
+            <p class="mb-4">
+                <b>
+                    @Produto.Preco.ToString("C")&nbsp;
+                </b>
+            </p>
+            <div>
+                <button class="btn btn-success">
+                    Incluir no Carrinho
+                </button>
+            </div>
+
+        </div>
+    </div>
+}
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    public ProdutoDTO? Produto { get; set; }
+
+    
+
+    protected override async Task OnParametersSetAsync()
+    {
+        Produto = await ProdutosService.GetProduto(Id);
+    }
+
+    private async Task LoadImage(string urlImage, int id)
+    {
+        var response = await Http.GetAsync($"/api/File/{urlImage}");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            await JS.InvokeVoidAsync("alert", "File not found.");
+        }
+        else
+        {
+            var fileStream = response.Content.ReadAsStream();
+            using var streamRef = new DotNetStreamReference(stream: fileStream);
+            await JS.InvokeVoidAsync("setImage", id, streamRef);
+            //await JS.InvokeVoidAsync("downloadFileFromStream", originalFileName, streamRef);
+        }
+    }
+}

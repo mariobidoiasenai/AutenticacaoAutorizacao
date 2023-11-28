@@ -1,0 +1,207 @@
+﻿@page "/novoProduto/{Id:int?}"
+@using System.Net.Http.Headers;
+@inject HttpClient HttpClient
+@inject IJSRuntime JS
+@inject IProdutosServices ProdutoService
+@inject NavigationManager NavigationManager
+@inject ICategoriaService CategoriaService
+
+<h3>Novo Produto</h3>
+<EditForm Model="Produto" OnValidSubmit="ExecuteSalvar">
+
+    <img class="@cssDisplay" src="@ImageUri" width="300" height="300" />
+    <br />
+    
+        <InputFile OnChange="@LoadFiles"/><br />
+    <div class="form-group row mt-2">
+        <label for="nome" class="col-sm-1 col-form-label">Nome</label>
+        <div class="col-sm-10">
+            <InputText class="form-control" id="nome" @bind-Value="Produto.Nome" />
+        </div>
+    </div>
+    <div class="form-group row mt-2">
+        <label for="desc" class="col-sm-1 col-form-label">Descrição</label>
+        <div class="col-sm-10">
+            <InputText class="form-control" id="desc" @bind-Value="Produto.Descricao" />
+        </div>
+    </div>
+    <div class="form-group row mt-2">
+        <label for="preco" class="col-sm-1 col-form-label">Preço R$</label>
+        <div class="col-sm-10">
+            <InputNumber class="form-control" id="preco" @bind-Value="Produto.Preco" />
+        </div>
+    </div>
+    @if (Categorias.Any())
+    {
+        <div class="d-flex align-items-center">
+            <span class="align-bottom me-2">Categoria:</span>
+            <select class="form-select w-50" @onchange="ExecuteFilter">
+                <option selected hidden>Selecione uma categoria</option>
+                @foreach (var cat in Categorias)
+                {
+                    <option value="@cat.Id">@cat.Nome</option>
+                }
+            </select>
+        </div>
+    }
+    <br />
+    <button type="submit">Salvar</button>
+</EditForm>
+
+<div class="toast-container p-3">
+  <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-header">
+      <strong class="me-auto">Salvo</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body">
+        Produto salvo com sucesso!!!
+    </div>
+  </div>
+</div>
+
+
+@code {
+    @code {
+        private int maxArquivosPermitidos = 10;
+        private long maxTamanhoArquivo = long.MaxValue;
+        private List<IBrowserFile> loadedFiles = new();
+
+        private long maxFileSize = 1024 * 15;
+        private int maxAllowedFiles = 1;
+        private bool isLoading;
+        private string cssDisplay = "d-none";
+        private string? ImageUri;
+
+        public Produto Produto { get; set; } = new();
+
+        public Categoria Categoria { get; set; } = new();
+
+        private List<Categoria> Categorias = new List<Categoria>();
+
+        private int CategoriaSelecionada = 0;
+
+        [Parameter]
+        public int Id { get; set; } = 0;
+
+        protected override async Task OnInitializedAsync()
+        {
+            Categorias = await CategoriaService.GetAllCategorias();
+
+        }
+
+        protected override void OnParametersSet()
+        {
+
+        }
+
+        private async Task ExecuteFilter(ChangeEventArgs e)
+        {
+            CategoriaSelecionada = int.Parse(e.Value.ToString());
+            Produto.CategoriaId = CategoriaSelecionada;
+        }
+
+        private async Task ExecuteSalvar()
+        {
+            using var content =
+                new MultipartFormDataContent();
+
+            foreach (var file in loadedFiles)
+            {
+                var fileContent =
+                    new StreamContent(
+                            file.OpenReadStream(maxTamanhoArquivo));
+
+                fileContent.Headers.ContentType =
+                    new MediaTypeHeaderValue(file.ContentType);
+
+                content.Add(
+                         content: fileContent,
+                         name: "\"files\"",
+                         fileName: file.Name
+                );
+
+                var response =
+                   await HttpClient.PostAsync("api/File", content);
+
+                Produto.UrlImage = await response.Content.ReadAsStringAsync();
+                
+                var p = await ProdutoService.PostProduto(Produto);
+                await JS.InvokeVoidAsync("showToast");
+                NavigationManager.NavigateTo("produtos");
+            }
+        }
+
+        private async Task LoadFiles(InputFileChangeEventArgs e)
+        {
+            isLoading = true;
+            loadedFiles.Clear();
+
+            foreach (var file in e.GetMultipleFiles(maxAllowedFiles))
+            {
+                try
+                {
+                    loadedFiles.Add(file);
+                    var image = await e.File.RequestImageFileAsync("image/png", 300, 300);
+
+                    using Stream imageStream = image.OpenReadStream(1024 * 1024 * 10);
+
+                    using MemoryStream ms = new();
+                    //copy imageStream to Memory stream
+                    await imageStream.CopyToAsync(ms);
+
+                    //convert stream to base64
+                    ImageUri = $"data:image/png;base64,{Convert.ToBase64String(ms.ToArray())}";
+                    cssDisplay = "d-block";
+                    StateHasChanged();
+                }
+                catch (Exception ex)
+                {
+
+                }
+            }
+
+            isLoading = false;
+        }
+
+        private async Task OnInputFileChange(InputFileChangeEventArgs e)
+        {
+            using var content = new MultipartFormDataContent();
+
+            foreach (var file in e.GetMultipleFiles(maxArquivosPermitidos))
+            {
+                var fileContent = new StreamContent(file.OpenReadStream(maxTamanhoArquivo));
+
+                fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+
+                content.Add(
+                         content: fileContent,
+                         name: "\"files\"",
+                         fileName: file.Name
+                );
+
+                var response = await HttpClient.PostAsync("api/File", content);
+            }
+        }
+
+
+
+
+        // public async Task LoadImage(InputFileChangeEventArgs inputFileChangeEventArgs)
+        // {
+        //     var image = await inputFileChangeEventArgs.File.RequestImageFileAsync("image/png", 600, 600);
+
+        //     using Stream imageStream = image.OpenReadStream(1024 * 1024 * 10);
+
+        //     using MemoryStream ms = new();
+
+        //     //copy imageStream to Memory stream
+        //     await imageStream.CopyToAsync(ms);
+
+        //     //convert stream to base64
+        //     ImageUri = $"data:image/png;base64,{Convert.ToBase64String(ms.ToArray())}";
+        //     cssDisplay = "d-block";
+        //     StateHasChanged();
+        // }
+    }
+}

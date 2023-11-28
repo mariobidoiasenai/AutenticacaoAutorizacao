@@ -1,0 +1,47 @@
+﻿@page "/login"
+@using AutenticacaoAutorizacao.Client.Services;
+@inject HttpClient Http
+@layout LoginLayout
+@inject AuthenticationStateProvider AuthenticationState
+@inject ISessionStorageService SessionStorage
+@inject NavigationManager Navigation
+
+<div class="card w-25">
+    <h3 class="card-header text-center">Login</h3>
+    <EditForm Model="LoginRequest"  class="card-body" OnValidSubmit="ExecuteLogin">
+        <label class="form-label" for="usuario">Usuário</label>
+        <InputText @bind-Value="LoginRequest.Username" id="usuario" class="form-control" />
+
+        <label class="form-label" for="passowrd">Password</label>
+        <InputText @bind-Value="LoginRequest.Password" id="password" class="form-control" type="password"  />
+        
+        <button class="btn btn-primary mt-2 w-100" type="submit">Entrar</button>
+    </EditForm>
+</div>
+
+@code {
+    public LoginRequest LoginRequest { get; set; } = new LoginRequest();
+    string? returnUrl = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        returnUrl = HttpUtility.ParseQueryString(new Uri(Navigation.Uri).Query)["returnUrl"];
+    }
+
+    private async Task ExecuteLogin()
+    {
+        AutenticacaoService service = new AutenticacaoService(Http);
+
+        var token = await service.Login(LoginRequest);
+
+        if (!string.IsNullOrEmpty(token))
+        {
+            await SessionStorage.SetItemAsync("token", token);
+
+            await AuthenticationState.GetAuthenticationStateAsync();
+
+            Navigation.NavigateTo(returnUrl);
+        }
+    }
+}

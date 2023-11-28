@@ -1,0 +1,47 @@
+﻿@page "/counter"
+
+<PageTitle>Counter</PageTitle>
+
+<h1>Counter</h1>
+
+<p role="status">Current count: @currentCount</p>
+
+<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+
+<AuthorizeView>
+    <Authorized >
+        <h1>Bem-Vindo usuário!!!</h1>
+    </Authorized>
+    <NotAuthorized>
+        <h2>Faça o login para ver o conteúdo secreto.</h2>
+    </NotAuthorized>
+</AuthorizeView>
+
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        <h2>Somente Admin pode visualizar esse texto.</h2>
+        <button>Painel</button>
+    </Authorized>
+</AuthorizeView>
+
+<AuthorizeView Roles="Aluno">
+    <Authorized>
+        <h2>Somente Aluno pode visualizar esse texto.</h2>
+    </Authorized>
+</AuthorizeView>
+
+<AuthorizeView Roles="Admin,Aluno">
+    <Authorized>
+        <h1>Admin e Aluno podem visualizar esse texto.</h1>
+    </Authorized>
+</AuthorizeView>
+
+
+@code {
+    private int currentCount = 0;
+
+    private void IncrementCount()
+    {
+        currentCount++;
+    }
+}

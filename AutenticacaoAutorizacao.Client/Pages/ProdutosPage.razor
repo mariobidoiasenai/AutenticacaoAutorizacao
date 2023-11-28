@@ -1,0 +1,66 @@
+﻿@page "/produtos/{CategoriaId:int?}"
+@inject IProdutosServices ProdutosService
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject ICategoriaService CategoriaService
+
+<AuthorizeView Roles="Admin">
+
+ @if (Categorias.Any())
+{
+    <div class="d-flex align-items-center">
+        <span class="align-bottom me-2">Categoria:</span>
+        <select class="form-select w-50" @onchange="ExecuteFilter">
+            <option selected hidden>Selecione uma categoria</option>
+            @foreach (var cat in Categorias)
+            {
+                <option value="@cat.Id">@cat.Nome</option>
+            }
+        </select>
+    </div>
+}
+</AuthorizeView>
+
+@if (!Produtos.Any())
+{
+    <h3>Não há produtos nesta categoria.</h3>
+}
+else
+{
+    <div class="top-row px-4">
+        <BotaoNovo Page="novoProduto"></BotaoNovo>
+    </div>
+
+   <ExibirProdutos Produtos="Produtos"></ExibirProdutos>
+}
+
+@code {
+
+    [Parameter]
+    public int CategoriaId { get; set; }
+
+    public Categoria Categoria { get; set; } = new();
+
+    private int CategoriaSelecionada = 0;
+
+    private List<ProdutoDTO> Produtos = new List<ProdutoDTO>();
+    private List<Categoria> Categorias = new List<Categoria>();
+    protected override async Task OnInitializedAsync()
+    {
+        Categorias = await CategoriaService.GetAllCategorias();
+
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        Produtos = await ProdutosService.GetProdutosPorCategoria(CategoriaId);
+    }
+
+    private async Task ExecuteFilter(ChangeEventArgs e)
+    {
+        CategoriaSelecionada = int.Parse(e.Value.ToString());
+        Produtos = await ProdutosService.GetProdutosPorCategoria(CategoriaSelecionada);
+    }
+
+    
+}

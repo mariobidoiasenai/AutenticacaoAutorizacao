@@ -1,0 +1,17 @@
+﻿@page "/admin"
+@attribute [Authorize(Roles="Admin")]
+<PageTitle>Painel de Admin</PageTitle>
+
+<h3>Painel</h3>
+
+<div class="list-group">
+    <a href="produtos" class="list-group-item list-group-item-action">Produtos</a>
+    <a href="categorias" class="list-group-item list-group-item-action">Categorias</a>
+    <a href="pedidos" class="list-group-item list-group-item-action">Pedidos</a>
+    <a href="transportadoras" class="list-group-item list-group-item-action">Transportadoras</a>
+    
+</div>
+
+@code {
+    
+}
